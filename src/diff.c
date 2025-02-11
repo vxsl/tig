@@ -31,7 +31,7 @@ diff_open(struct view *view, enum open_flags flags)
 	// https://github.com/dandavison/delta/issues/1957
 	if (opt_diff_highlight) {
 		struct app_external *dhlt_app = app_diff_highlight_load(opt_diff_highlight);
-		if (dhlt_app->argv[0] && app_diff_highlight_is_delta(dhlt_app->argv[0])) {
+		if (dhlt_app->argv[0] && path_is_delta(dhlt_app->argv[0])) {
 			word_diff_arg_if_not_delta = "";
 		}
 	}

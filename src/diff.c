@@ -25,11 +25,22 @@
 static enum status_code
 diff_open(struct view *view, enum open_flags flags)
 {
+	const char *word_diff_arg_if_not_delta = word_diff_arg();
+
+	// as of delta 0.18.2, there is a bug that causes delta to sometimes produce unhighlighted output when --word-diff is used:
+	// https://github.com/dandavison/delta/issues/1957
+	if (opt_diff_highlight) {
+		struct app_external *dhlt_app = app_diff_highlight_load(opt_diff_highlight);
+		if (dhlt_app->argv[0] && app_diff_highlight_is_delta(dhlt_app->argv[0])) {
+			word_diff_arg_if_not_delta = "";
+		}
+	}
+
 	const char *diff_argv[] = {
 		"git", "show", encoding_arg, "--pretty=fuller", "--root",
 			"--patch-with-stat", use_mailmap_arg(),
 			show_notes_arg(), diff_context_arg(), ignore_space_arg(),
-			DIFF_ARGS, "%(cmdlineargs)", "--no-color", word_diff_arg(),
+			DIFF_ARGS, "%(cmdlineargs)", "--no-color", word_diff_arg_if_not_delta,
 			"%(commit)", "--", "%(fileargs)", NULL
 	};
 	enum status_code code;

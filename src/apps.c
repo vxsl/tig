@@ -94,6 +94,12 @@ app_diff_highlight_path_search(char *dest, size_t destlen, const char *query)
 	return true;
 }
 
+bool
+*app_diff_highlight_is_delta(const char *path) {
+	const char *lastSlash = strrchr(path, '/');
+	return lastSlash && strcmp(lastSlash, "/delta") == 0;
+}
+
 struct app_external
 *app_diff_highlight_load(const char *query)
 {
@@ -107,7 +113,7 @@ struct app_external
 	    && app_diff_highlight_path_search(dhlt_path, sizeof(dhlt_path), query)
 	    && *dhlt_path) {
 		if (suffixcmp(dhlt_path, strlen(dhlt_path), "/diff-highlight.perl")) {
-			if (strcmp(strrchr(dhlt_path, '/'), "/delta") == 0) {
+			if (app_diff_highlight_is_delta(dhlt_path)) {
 				dhlt_app.argv[0] = dhlt_path;
 				dhlt_app.argv[1] = "--true-color=never";
 				dhlt_app.argv[2] = NULL;

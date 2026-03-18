@@ -95,7 +95,7 @@ app_diff_highlight_path_search(char *dest, size_t destlen, const char *query)
 }
 
 bool
-*path_is_delta(const char *path) {
+path_is_delta(const char *path) {
 	const char *lastSlash = strrchr(path, '/');
 	return lastSlash && strcmp(lastSlash, "/delta") == 0;
 }

@@ -116,7 +116,14 @@ struct app_external
 			if (path_is_delta(dhlt_path)) {
 				dhlt_app.argv[0] = dhlt_path;
 				dhlt_app.argv[1] = "--true-color=never";
-				dhlt_app.argv[2] = NULL;
+				/* delta rewrites the diff into its own presentation, dropping the
+				 * "diff --git"/"--- a/"/"+++ b/" lines that tig parses to work out
+				 * which file each line belongs to. Everything keyed off %(file)
+				 * then silently does nothing. --navigate is delta's own mechanism
+				 * for making file sections locatable: it prefixes each file header
+				 * with DELTA_FILE_MARKER, which diff_get_pathname() reads instead. */
+				dhlt_app.argv[2] = "--navigate";
+				dhlt_app.argv[3] = NULL;
 			} else {
 				dhlt_app.argv[0] = dhlt_path;
 				dhlt_app.argv[1] = NULL;

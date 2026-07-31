@@ -32,6 +32,10 @@ struct app_external {
  */
 
 bool path_is_delta(const char *path);
+
+/* Prefix delta --navigate puts on each file header. Parsing this is how tig
+ * recovers the current file when delta is the diff-highlight command. */
+#define DELTA_FILE_MARKER "\xce\x94 "   /* "Δ " */
 struct app_external *app_diff_highlight_load(const char *query);
 
 #endif

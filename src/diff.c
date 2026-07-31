@@ -721,6 +721,71 @@ diff_trace_origin(struct view *view, struct line *line)
 	return REQ_VIEW_BLAME;
 }
 
+bool
+diff_highlight_is_delta(void)
+{
+	struct app_external *app;
+
+	if (!opt_diff_highlight || !*opt_diff_highlight)
+		return false;
+	app = app_diff_highlight_load(opt_diff_highlight);
+	return app->argv[0] && path_is_delta(app->argv[0]);
+}
+
+/* Diff-view text still carries the raw escape sequences; they are interpreted when
+ * drawing, not stripped on read. delta colours its header, so the marker is preceded
+ * by an SGR sequence and a plain prefix comparison never matches. */
+static const char *
+skip_ansi(const char *text)
+{
+	while (text && *text == '\033') {
+		const char *end = strchr(text, 'm');
+
+		if (!end)
+			break;
+		text = end + 1;
+	}
+	return text;
+}
+
+/*
+ * Under delta the usual header lines are gone, so walk back to the nearest
+ * "Δ <path>" marker emitted by --navigate. Requiring the marker to be the first
+ * visible thing on the line keeps a diff line that merely contains "Δ " from being
+ * mistaken for a file header.
+ */
+static const char *
+diff_get_delta_pathname(struct view *view, struct line *line)
+{
+	static char pathname[SIZEOF_STR];
+	struct line *pos;
+
+	for (pos = line; pos >= view->line; pos--) {
+		const char *text = skip_ansi(box_text(pos));
+		const char *name;
+		const char *rename;
+		size_t i;
+
+		if (!text || prefixcmp(text, DELTA_FILE_MARKER))
+			continue;
+
+		name = text + STRING_SIZE(DELTA_FILE_MARKER);
+		/* Renames render as "old ⟶ new"; the new name is what callers want. */
+		rename = strstr(name, " \xe2\x9f\xb6 ");
+		if (rename)
+			name = rename + STRING_SIZE(" \xe2\x9f\xb6 ");
+
+		for (i = 0; i + 1 < sizeof(pathname) && name[i] && name[i] != '\033'; i++)
+			pathname[i] = name[i];
+		while (i > 0 && pathname[i - 1] == ' ')
+			i--;
+		pathname[i] = 0;
+
+		return *pathname ? pathname : NULL;
+	}
+	return NULL;
+}
+
 const char *
 diff_get_pathname(struct view *view, struct line *line, bool old)
 {
@@ -729,6 +794,16 @@ diff_get_pathname(struct view *view, struct line *line, bool old)
 	const char *prefixes[] = { "diff --cc ", "diff --combined " };
 	const char *name;
 	int i;
+
+	if (diff_highlight_is_delta()) {
+		/* Return before touching the static buffer: diff_common_select() asks for
+		 * the new name and then the old one while still holding the first result,
+		 * so writing on the "old" call would clobber the name it is about to use.
+		 * delta prints a single path per section anyway. */
+		if (old)
+			return NULL;
+		return diff_get_delta_pathname(view, line);
+	}
 
 	header = find_prev_line_in_commit_by_type(view, line, LINE_DIFF_HEADER);
 	if (!header)
